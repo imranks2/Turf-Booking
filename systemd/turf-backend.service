@@ -1,0 +1,25 @@
+[Unit]
+Description=Turf SaaS Gunicorn (Flask-SocketIO)
+After=network.target mysql.service redis-server.service
+Requires=redis-server.service
+
+[Service]
+Type=simple
+User=turf
+Group=turf
+WorkingDirectory=/opt/turf/backend
+EnvironmentFile=/opt/turf/backend/.env
+RuntimeDirectory=turf
+ExecStartPre=/opt/turf/backend/.venv/bin/alembic upgrade head
+ExecStart=/opt/turf/backend/.venv/bin/gunicorn \
+    -w 4 \
+    -k geventwebsocket.gunicorn.workers.GeventWebSocketWorker \
+    --bind unix:/run/turf/backend.sock \
+    --access-logfile - \
+    --error-logfile - \
+    wsgi:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,15 @@
+Alembic migrations for Turf SaaS.
+
+Generate: alembic revision --autogenerate -m "message"
+Apply:    alembic upgrade head
+Rollback: alembic downgrade -1
+
+
+
+=== Demo data seeded ===
+Role        Email                     Password
+--------------------------------------------------
+saas_admin  admin@turfapp.in          Admin@12345
+turf_owner  owner1@turfapp.in         Owner@12345
+turf_owner  owner2@turfapp.in         Owner@12345
+player      player@turfapp.in         Player@12345

@@ -1,0 +1,18 @@
+[Unit]
+Description=Turf SaaS Celery Worker
+After=network.target redis-server.service
+Requires=redis-server.service
+
+[Service]
+Type=simple
+User=turf
+Group=turf
+WorkingDirectory=/opt/turf/backend
+EnvironmentFile=/opt/turf/backend/.env
+ExecStart=/opt/turf/backend/.venv/bin/celery -A celery_worker.celery worker \
+    -l info -Q whatsapp,payouts,refunds,default --concurrency=4
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,8 @@
+.venv
+venv
+__pycache__
+*.pyc
+.pytest_cache
+.env
+_alembic_test.db
+tests

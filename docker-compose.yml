@@ -1,0 +1,104 @@
+services:
+  # db:
+  #   image: mysql:8.0
+  #   restart: unless-stopped
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-turf_user}
+  #     MYSQL_DATABASE: ${MYSQL_DATABASE:-turf_saas}
+  #     MYSQL_USER: ${MYSQL_USER:-turf}
+  #     MYSQL_PASSWORD: ${MYSQL_PASSWORD:-turfpass}
+  #   volumes:
+  #     - mysql_data:/var/lib/mysql
+  #   healthcheck:
+  #     test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:-turf_user}"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 10
+  #   ports:
+  #     - "3306:3306"
+  #   networks:
+  #     - shared-net
+
+  # redis:
+  #   image: redis:7.2-alpine
+  #   restart: unless-stopped
+  #   command: ["redis-server", "--appendonly", "yes"]
+  #   volumes:
+  #     - redis_data:/data
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 10
+  #   ports:
+  #     - "6379:6379"
+  #   networks:
+  #     - shared-net
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    env_file: ./backend/.env
+    # depends_on:
+    #   db:
+    #     condition: service_healthy
+    #   redis:
+    #     condition: service_healthy
+    command: >
+      sh -c "alembic upgrade head &&
+             gunicorn -w 4 -k geventwebsocket.gunicorn.workers.GeventWebSocketWorker -b 0.0.0.0:5000 wsgi:app"
+    expose:
+      - "5000"
+    ports:
+      - "5000:5000"
+    networks:
+      - shared-net
+
+  celery:
+    build: ./backend
+    restart: unless-stopped
+    env_file: ./backend/.env
+    # depends_on:
+      # redis:
+      #   condition: service_healthy
+      # db:
+      #   condition: service_healthy
+    command: celery -A celery_worker.celery worker -l info -Q whatsapp,payouts,refunds,default
+    networks:
+      - shared-net
+
+  flower:
+    build: ./backend
+    restart: unless-stopped
+    env_file: ./backend/.env
+    # depends_on:
+    #   redis:
+    #     condition: service_healthy
+    command: celery -A celery_worker.celery flower --port=5555
+    ports:
+      - "5555:5555"
+    networks:
+      - shared-net
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api/v1}
+        VITE_SOCKET_URL: ${VITE_SOCKET_URL:-}
+        VITE_RAZORPAY_KEY_ID: ${VITE_RAZORPAY_KEY_ID:-}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    networks:
+      - shared-net
+
+# volumes:
+#   mysql_data:
+#   redis_data:
+
+networks:
+  shared-net:
+    external: true
